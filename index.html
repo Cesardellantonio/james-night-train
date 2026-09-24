@@ -73,6 +73,7 @@
     transition: opacity 1.2s ease;
   }
   body.idle .controls, body.idle .title { opacity: 0.14; }
+  body.asleep .controls, body.asleep .title { opacity: 0; }
   body.prestart .controls, body.prestart .title { opacity: 0; pointer-events: none; }
   .controls button {
     font: inherit;
@@ -1196,7 +1197,7 @@
   const fsBtn = document.getElementById('fsBtn');
   const goodnight = document.getElementById('goodnight');
   const startEl = document.getElementById('start');
-  const SLEEP_STEPS = [0, 10, 20, 30];
+  const SLEEP_STEPS = [5, 10, 20, 0]; // the timer starts at 5 minutes
 
   let wakeLock = null;
   async function keepAwake() {
@@ -1208,7 +1209,7 @@
     } catch (e) { wakeLock = null; }
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { keepAwake(); if (AC && soundOn) AC.resume(); }
+    if (document.visibilityState === 'visible') { if (!asleep) keepAwake(); if (AC && soundOn) AC.resume(); }
   });
 
   function setSound(on) {
@@ -1228,6 +1229,9 @@
     whistle();
     speak('All aboard, James!');
     setTimeout(() => { if (phase === 'dwell') depart(true); }, 2400);
+    sleepMinutes = 5; sleepStart = t; sleepP = 0;
+    sleepBtn.setAttribute('aria-pressed', 'true');
+    updateSleepLabel();
     poke();
   });
 
@@ -1268,12 +1272,17 @@
     setMusicLevel(0, 10);
     setTimeout(() => { if (asleep) speak('Goodnight, James. Sweet dreams.'); }, 3500);
     setTimeout(() => { if (asleep) { stopMusic(0.1); goodnight.classList.add('show'); } }, 7000);
+    setTimeout(() => { if (asleep) goodnight.classList.remove('show'); }, 15000);
+    document.body.classList.add('asleep');
+    // the screen is fully dark now, so let the device lock itself when it wants to
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     setStatus('Sleeping at the end of the line');
     updateSleepLabel();
   }
   function wake() {
     asleep = false; sleepMinutes = 0; sleepP = 0;
     goodnight.classList.remove('show');
+    document.body.classList.remove('asleep');
     sleepBtn.setAttribute('aria-pressed', 'false');
     if (soundOn) startMusic();
     setStatus(phase === 'dwell' ? `Now at ${stationName(stationN)}` : `Next stop: ${stationName(stationN)}`);
@@ -1364,9 +1373,11 @@
     drawSparkles(dt);
     drawSnow(dt);
 
-    const dimTarget = asleep ? 0.62 : sleepP * 0.45;
-    dim += (dimTarget - dim) * Math.min(1, dt * 0.5);
-    if (dim > 0.005) { ctx.fillStyle = `rgba(3,5,18,${dim.toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+    // Wind-down: the whole scene fades toward black over the sleep timer,
+    // then goes fully dark once the train has stopped.
+    const dimTarget = asleep ? 1 : 0.9 * Math.pow(sleepP, 0.85);
+    dim += (dimTarget - dim) * Math.min(1, dt * (asleep ? 0.25 : 0.5));
+    if (dim > 0.005) { ctx.fillStyle = `rgba(0,0,0,${Math.min(1, dim).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
 
     requestAnimationFrame(frame);
   }

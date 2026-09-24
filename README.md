@@ -5,7 +5,7 @@ stops at stations, crosses a river bridge and passes a field of sheep jumping a 
 
 - Music-box lullabies (Twinkle Twinkle and Brahms' Lullaby), rail sounds, owls and crickets
 - Tap the train, the moon, the sky or the fields
-- Sleep timer: the scene dims, the train slows and stops, and it says goodnight
+- Wind-down: the screen darkens over 5 minutes (10 or 20 with the timer button) until it is fully dark, the train stops and says goodnight
 - Snow on and off, full screen, keeps the screen awake where the browser allows
 
 ## Files
